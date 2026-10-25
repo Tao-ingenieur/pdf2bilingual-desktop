@@ -15,6 +15,7 @@ def parser():
     convert.add_argument('input', type=Path)
     convert.add_argument('--output', type=Path, required=True)
     convert.add_argument('--lang', choices=['zh', 'en', 'bi', 'all'], default='zh')
+    convert.add_argument('--format', choices=['tex-pdf', 'pptx', 'all'], default='all', help='TeX + PDF、仅 PPTX 或全部（默认）')
     convert.add_argument('--enable-model', action='store_true')
     convert.add_argument('--base-url', default=os.environ.get('OPENAI_BASE_URL', 'https://api.openai.com/v1'))
     convert.add_argument('--model', default=os.environ.get('OPENAI_MODEL', ''))
@@ -29,7 +30,7 @@ def parser():
     build = commands.add_parser('build', help='根据完整内容生成目标语言文档')
     build.add_argument('key')
     build.add_argument('--lang', choices=['zh', 'en', 'bi'], default='zh')
-    build.add_argument('--format', choices=['all', 'pdf', 'tex', 'pptx'], default='all')
+    build.add_argument('--format', choices=['all', 'tex-pdf', 'pdf', 'tex', 'pptx'], default='all')
     task = commands.add_parser('export-task', help='导出 Codex 任务，无需 API Key')
     task.add_argument('key')
     task.add_argument('--lang', choices=['zh', 'en', 'bi'], default='zh')
@@ -59,7 +60,7 @@ def main(argv=None):
     try:
         if args.command == 'convert':
             from pipeline.convert import convert_pdf
-            convert_pdf(args.input, args.output, args.lang, args.enable_model, args.base_url, args.model)
+            convert_pdf(args.input, args.output, args.lang, args.enable_model, args.base_url, args.model, output_format=args.format)
         elif args.command == 'extract':
             from pipeline.extract import extract_pdf
             key = extract_pdf(args.input, args.key, args.dpi, args.overwrite)
@@ -72,7 +73,8 @@ def main(argv=None):
             return 2 if rows else 0
         elif args.command == 'build':
             from pipeline.exporter import build_v2
-            build_v2(args.key, args.lang, ('pdf', 'tex', 'pptx') if args.format == 'all' else (args.format,))
+            from pipeline.convert import OUTPUT_FORMATS
+            build_v2(args.key, args.lang, OUTPUT_FORMATS.get(args.format, (args.format,)))
         elif args.command == 'export-task':
             from pipeline.assist import export_handoff
             print(export_handoff(args.key, args.lang))

@@ -14,6 +14,7 @@ def tex_escape(text):
 
 
 MATH_COMMANDS = set('frac dfrac tfrac sqrt left right big Big bigg Bigg sin cos tan cot sec csc arcsin arccos arctan sinh cosh tanh log ln exp lim sum prod int iint iiint oint infty alpha beta gamma delta epsilon varepsilon zeta eta theta vartheta iota kappa lambda mu nu xi pi varpi rho sigma tau upsilon phi varphi chi psi omega Gamma Delta Theta Lambda Xi Pi Sigma Upsilon Phi Psi Omega cdot times div pm mp le leq ge geq ne neq approx equiv sim simeq propto in notin subset subseteq supset supseteq cup cap emptyset forall exists neg land lor to rightarrow leftarrow Rightarrow Leftarrow Leftrightarrow mapsto vec overrightarrow overline underline hat bar dot ddot tilde widehat widetilde mathrm mathbf mathit mathsf mathbb mathcal boldsymbol text operatorname begin end quad qquad displaystyle textstyle limits nolimits binom dbinom tbinom cfrac cases aligned matrix pmatrix bmatrix vmatrix Vmatrix array color'.split())
+MATH_COMMANDS.update('circ cdots ldots vdots ddots perp parallel angle triangle otimes oplus partial nabla det min max arg Pr lvert rvert lVert rVert underbrace overbrace not equiv implies iff lg csc mid'.split())
 
 
 def rich_tex(text):
@@ -21,7 +22,7 @@ def rich_tex(text):
     output = []
     for part in parts:
         if len(part) > 1 and part.startswith('$') and part.endswith('$'):
-            commands = re.findall(r'\\([A-Za-z]+)', part)
+            commands = re.findall(r'(?<!\\)\\([A-Za-z]+)', part)
             if any(cmd not in MATH_COMMANDS for cmd in commands):
                 raise ValueError('公式含不支持的 LaTeX 命令，请在 content.json 中检查后重试。')
             environments = re.findall(r'\\(?:begin|end)\s*\{([^}]+)\}', part)
@@ -106,10 +107,11 @@ def build_v2(key, lang='source', formats=('pdf', 'tex', 'pptx'), progress=print,
         progress(f'PDF 原貌版完成：{len(doc["pages"])} 页，保留原始页面。')
     if 'tex' in formats or ('pdf' in formats and lang != 'source'):
         lines = [r'% !TeX program = xelatex', r'\documentclass[11pt]{article}',
-                 r'\usepackage[UTF8]{ctex}' if lang in ('zh', 'bi') else r'\usepackage{fontspec}',
+                 r'\usepackage[UTF8]{ctex}',
+                 r'\setmainfont{Times New Roman}',
                  r'\usepackage{amsmath,amssymb,graphicx}',
                  r'\usepackage[a4paper,margin=18mm]{geometry}', r'\graphicspath{{' + figure_subdir + '/}}',
-                 r'\setlength{\parindent}{0pt}', r'\begin{document}']
+                 r'\setlength{\parindent}{0pt}', r'\setlength{\emergencystretch}{3em}', r'\begin{document}']
         if lang == 'source':
             lines = [r'\documentclass{article}', r'\usepackage{graphicx}',
                      r'\pagestyle{empty}', r'\hoffset=-1in', r'\voffset=-1in', r'\begin{document}']
@@ -148,66 +150,9 @@ def build_v2(key, lang='source', formats=('pdf', 'tex', 'pptx'), progress=print,
         if 'tex' not in formats:
             tex_path.unlink(missing_ok=True)
     if 'pptx' in formats:
-        from pptx import Presentation
-        from pptx.util import Inches, Pt
-        from pptx.dml.color import RGBColor
-        from PIL import Image
-        prs = Presentation()
-        prs.slide_width, prs.slide_height = Inches(13.333), Inches(7.5)
-
-        def slide_image(filename):
-            slide = prs.slides.add_slide(prs.slide_layouts[6])
-            slide.background.fill.solid()
-            slide.background.fill.fore_color.rgb = RGBColor(242, 244, 248)
-            with Image.open(figures / filename) as im:
-                ratio = im.width/im.height
-            width = min(prs.slide_width, int(prs.slide_height*ratio))
-            height = int(width/ratio)
-            slide.shapes.add_picture(str(figures / filename), (prs.slide_width-width)//2,
-                                     (prs.slide_height-height)//2, width=width, height=height)
-
-        for p in doc['pages']:
-            if cancelled():
-                raise InterruptedError('生成已取消。')
-            if lang == 'source':
-                slide_image(p['preview'])
-            else:
-                # Small text chunks avoid the legacy one-chapter-per-slide overflow.
-                from .tex2plain import tex2plain
-                chunks = []
-                current = ''
-                for kind, text in _body_groups(p, lang):
-                    if kind == 'fig':
-                        if current:
-                            chunks.append(('text', current)); current = ''
-                        chunks.append(('fig', text))
-                        continue
-                    text = '\n'.join(tex2plain(line) for line in text)
-                    # Keep a Chinese/English pair together when starting a new slide.
-                    parts = [text] if lang == 'bi' else [text[start:start+450] for start in range(0, len(text), 450)]
-                    for part in parts:
-                        if current and len(current)+len(part) > 450:
-                            chunks.append(('text', current)); current = ''
-                        current += part + '\n\n'
-                if current:
-                    chunks.append(('text', current))
-                for kind, text in chunks:
-                    if kind == 'fig':
-                        slide_image(text)
-                    else:
-                        slide = prs.slides.add_slide(prs.slide_layouts[6])
-                        title = slide.shapes.add_textbox(Inches(.5), Inches(.3), Inches(12.3), Inches(.6))
-                        title.text_frame.text = f'{doc["title"]} · {p["number"]}'
-                        title.text_frame.paragraphs[0].font.size = Pt(22)
-                        box = slide.shapes.add_textbox(Inches(.6), Inches(1.1), Inches(12.1), Inches(5.9))
-                        box.text_frame.word_wrap = True
-                        box.text_frame.text = text
-                        from pptx.enum.text import MSO_AUTO_SIZE
-                        box.text_frame.auto_size = MSO_AUTO_SIZE.TEXT_TO_FIT_SHAPE
-                        for paragraph in box.text_frame.paragraphs:
-                            paragraph.font.name = 'Microsoft YaHei'
-                            paragraph.font.size = Pt(18)
-        prs.save(str(out / f'{key}_{label}.pptx'))
-        progress(f'PPTX 完成：{len(prs.slides)} 张幻灯片。')
+        from .slides import export_slides
+        count = export_slides(doc, lang, _body_groups, figures,
+                              out / f'{key}_{label}.pptx', cancelled)
+        progress(f'PPTX 完成：{count} 张幻灯片。')
     progress(f'生成完成：{out}')
     return out

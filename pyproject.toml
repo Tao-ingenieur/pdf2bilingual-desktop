@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "pdf2bilingual-desktop"
-version = "0.2.0"
+version = "0.3.0"
 description = "Windows GUI and CLI for local PDF extraction and optional LLM-assisted Chinese, English and bilingual exports"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -16,6 +16,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+math = ["latex2mathml>=3.81"]
 build = ["pyinstaller>=6.10"]
 
 [project.scripts]

@@ -1,6 +1,6 @@
-# PDF 转换器：Windows GUI + CLI
+# PDF 文档双语翻译器：Windows GUI + CLI
 
-输入 PDF，选择输出目录和中文／英文／双语／全部，一次生成对应的 **TeX、PDF、PPTX**。双语按条目和子项逐条对齐，**中文一行、英文紧随下一行**，长句会自然换行。“全部”同时生成中文、英文、双语三套，共 9 个文件。程序先在本地解析；内容不完整或缺少目标语言时，需要 LLM 补全后才能输出。不会自动生成原貌版来替代合格的转换结果。
+输入 PDF，选择输出目录和中文／英文／双语／全部，选择 **TeX + PDF、仅 PPTX 或 TeX + PDF + PPTX** 输出组合。双语按条目和子项逐条对齐，**中文一行、英文紧随下一行**，长句会自然换行。输出语言“全部”同时生成中文、英文、双语三套；根据输出格式分别生成 6、3 或 9 个主要文件。程序先在本地解析；内容不完整或缺少目标语言时，需要 LLM 补全后才能输出。不会自动生成原貌版来替代合格的转换结果。
 
 ## Windows GUI
 
@@ -11,6 +11,7 @@
 - 输入 PDF、浏览按钮。
 - 输出目录、浏览按钮。
 - 输出语言：中文、英文、双语、全部（中文＋英文＋双语）。
+- 输出格式：TeX + PDF、仅 PPTX、TeX + PDF + PPTX。
 - “配置 LLM…”按钮和“连接 LLM”复选框。
 - “生成”“停止”按钮，以及一个处理日志窗口。
 
@@ -23,7 +24,7 @@
 3. 内容完整时，直接继续，本次不调用 LLM。简单的中英逐行交替原文可以直接对齐。
 4. 内容不完整且未勾选“连接 LLM”时，停止并在日志中提示：启用 LLM，或通过 agent 的 CLI 继续处理。不会生成最终文件。
 5. 已勾选时，自动连接配置的 LLM，补全并翻译所需页面，随后继续生成；不需要第二次点击。
-6. 所选版本的 TeX、PDF、PPTX 全部生成成功后，才发布到选择的输出目录。选择“全部”时，9 个文件都成功后才发布；LLM 只做一次双语补全，再复用内容生成三套版本。编译失败或模型仍无法确认内容时，不发布部分结果；之前已有的输出不因失败而覆盖。
+6. 所选语言和输出格式全部生成成功后，才发布到选择的输出目录。LLM 只做一次双语补全，再复用内容生成三套版本。编译失败或模型仍无法确认内容时，不发布部分结果；之前已有的输出不因失败而覆盖。
 
 日志显示当前步骤、本次是否无需 LLM、是否已经连上 LLM、各页处理进度和最终输出位置。
 
@@ -43,16 +44,23 @@ API Key 仅保存在当前进程内存，也可从 `OPENAI_API_KEY` 环境变量
 py -3 -m pip install -e ./repo
 ```
 
+PPTX 将相邻插图与对应编号题目、说明和公式放在同一页：宽图置于文字下方，窄图使用左右布局；长内容在中英对照条目之间分页，相关图随说明保留，避免只有图片而没有题目的页面。关联依据 `content.json` 的块顺序（插图紧跟对应题目及说明），编辑中间数据时应保留这个顺序。
+
+数学教材的 PPTX 可选用可编辑的 Office 公式：源码环境安装 `py -3 -m pip install -e "./repo[math]"`，并在本机安装 Microsoft Office。程序使用本机的 `MML2OMML.XSL` 将 LaTeX 转为 Office Math，不联网。未安装该可选依赖时使用普通文本公式。PDF 仍由 XeLaTeX 排版；内嵌的希腊字母、音标及中文词例使用相应字体。插图保留原图标注。
+
 一次完成与 GUI 相同的流程：
 
 ```powershell
-pdf2bilingual convert "dist/input/Statistics 1&2&3-stamped.pdf" --output "D:/my-output" --lang bi
+pdf2bilingual convert "dist/input/Statistics 1&2&3-stamped.pdf" --output "D:/my-output" --lang bi --format tex-pdf
+
+# 仅生成中文、英文、双语三份 PPTX
+pdf2bilingual convert "dist/input/Statistics 1&2&3-stamped.pdf" --output "D:/my-output" --lang all --format pptx
 
 # 需要自动连接模型时显式开启；Key 从环境变量读取
 pdf2bilingual convert "dist/input/Statistics 1&2&3-stamped.pdf" --output "D:/my-output" --lang bi --enable-model --base-url https://api.openai.com/v1 --model YOUR_VISION_MODEL
 ```
 
-安装后也可使用 `python -m cli` 代替 `pdf2bilingual`；`pdf2bilingual-gui` 或 `python -m gui` 启动源码 GUI。从项目根目录直接运行源码时，用 `python repo/src/cli.py ...`。输出语言为 `zh`、`en`、`bi`、`all`；`--lang all` 一次生成三套共 9 个文件。`convert` 固定生成全部三种格式，不需要选择格式。
+安装后也可使用 `python -m cli` 代替 `pdf2bilingual`；`pdf2bilingual-gui` 或 `python -m gui` 启动源码 GUI。从项目根目录直接运行源码时，用 `python repo/src/cli.py ...`。输出语言为 `zh`、`en`、`bi`、`all`；`--format tex-pdf` 生成 TeX + PDF，`--format pptx` 仅生成 PPTX，`--format all`（默认）生成全部三种格式。语言与格式独立组合，例如 `--lang all --format pptx` 生成 3 个 PPTX。仅导出 PPTX 不需要 XeLaTeX，也无需携带外部图片目录；TeX + PDF 则需要 XeLaTeX，且 TeX 必须连同引用图片保存。
 
 ### 没有 LLM API：交给 Codex 等 agent 运行 CLI
 
@@ -123,6 +131,8 @@ python repo/src/cli.py convert "dist/input/Statistics 1&2&3-stamped.pdf" --outpu
 
 最终文件命名为 `<key>_ZH/EN/BI.tex/.pdf/.pptx`，TeX 引用图片位于输出目录的 `figures/<key>_<语言>/`。移动 TeX 时要同时移动相应图片。exe 在 `dist/release/` 时会使用同一个 `dist/input`、`dist/work`、`dist/output`，不会创建 `release/dist`。移动项目时保留这层结构；单独移动 exe 到其他目录时，它会使用新目录下的 dist。可用 `PDFBILINGUAL_HOME` 指定最外层项目目录。
 
+输出文件直接保存在所选目录，不额外生成 ZIP 压缩包。
+
 从 GitHub 获取源码时，可保持相同布局：
 
 ```powershell
@@ -150,4 +160,4 @@ powershell -NoProfile -File repo/packaging/build-exe.ps1 -Python python
 ./dist/release/PDFBilingual.exe --self-test --language en --report dist/qa/simple-exe.json
 ```
 
-测试覆盖简化界面、中英切换、无 LLM 完成、缺失内容阻止输出、开启 LLM 自动继续、生成失败不覆盖旧文件、导入校验和图片裁切。API 回归测试使用模拟接口，不消耗额度。统计文件用于集成测试，另两本数学 PDF 留给 GUI 手工测试。
+测试覆盖简化界面、中英切换、无 LLM 完成、缺失内容阻止输出、开启 LLM 自动继续、生成失败不覆盖旧文件、导入校验和图片裁切。API 回归测试使用模拟接口，不消耗额度。回归测试还覆盖输出格式组合、PPTX 不依赖 XeLaTeX、图文同页、图文无交叠及双语顺序。

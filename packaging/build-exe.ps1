@@ -5,6 +5,10 @@ $projectPath = Split-Path -Parent $repoPath
 $buildPath = Join-Path $projectPath 'dist\build'
 $releasePath = Join-Path $projectPath 'dist\release'
 $tools = Join-Path $buildPath 'tools'
+$mathTools = Join-Path $buildPath 'math-tools'
+if (Test-Path -LiteralPath $mathTools) {
+    $env:PYTHONPATH = $mathTools + [IO.Path]::PathSeparator + $env:PYTHONPATH
+}
 if (Test-Path -LiteralPath $tools) {
     $env:PYTHONPATH = $tools + [IO.Path]::PathSeparator + $env:PYTHONPATH
 }

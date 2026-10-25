@@ -1,6 +1,7 @@
 # -*- mode: python ; coding: utf-8 -*-
 from PyInstaller.utils.hooks import collect_all
 from pathlib import Path
+from importlib.util import find_spec
 
 repo_dir = Path(SPECPATH).resolve().parent
 
@@ -11,6 +12,9 @@ tmp_ret = collect_all('pypdfium2')
 datas += tmp_ret[0]; binaries += tmp_ret[1]; hiddenimports += tmp_ret[2]
 tmp_ret = collect_all('pypdfium2_raw')
 datas += tmp_ret[0]; binaries += tmp_ret[1]; hiddenimports += tmp_ret[2]
+if find_spec('latex2mathml'):
+    tmp_ret = collect_all('latex2mathml')
+    datas += tmp_ret[0]; binaries += tmp_ret[1]; hiddenimports += tmp_ret[2]
 
 
 a = Analysis(

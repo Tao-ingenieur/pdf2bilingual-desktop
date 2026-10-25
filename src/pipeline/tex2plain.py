@@ -22,7 +22,7 @@ SYMBOLS = {"neq": "≠", "geqslant": "≥", "leqslant": "≤", "geq": "≥",
            "lambda": "λ", "Delta": "Δ",            "in": "∈", "notin": "∉", "int": "∫", "sum": "∑",
            "ldots": "…", "cdots": "⋯", "dots": "…", "vdots": "⋮",
            "propto": "∝", "deg": "°", "pi": "π", "angle": "∠"}
-FUNCS = {"sin", "cos", "tan", "log", "ln", "sec", "cosec", "cot",
+FUNCS = {"sin", "cos", "tan", "log", "ln", "sec", "cosec", "csc", "cot",
          "arcsin", "arccos", "arctan", "exp"}
 DROPCMDS = {"textbf", "textit", "texttt", "textrm", "mathrm", "mathbf",
             "mathsf", "mathtt", "mathbb", "operatorname", "multirow",
@@ -92,6 +92,20 @@ def _supsub(s):
     return "".join(out)
 
 
+def _argument(s, i):
+    while i < len(s) and s[i].isspace():
+        i += 1
+    if i >= len(s):
+        return '', i
+    if s[i] == '{':
+        return _balanced(s, i)
+    if s[i] == '\\':
+        token = re.match(r'\\(?:[A-Za-z]+|.)', s[i:])
+        if token:
+            return token.group(), i + len(token.group())
+    return s[i], i + 1
+
+
 def _frac(s):
     pat = re.compile(r"\\([dt]?)frac")
     out, i = [], 0
@@ -100,8 +114,8 @@ def _frac(s):
         if not m:
             out.append(s[i:]); break
         out.append(s[i:m.start()])
-        a, j = _balanced(s, m.end())
-        b, k = _balanced(s, j)
+        a, j = _argument(s, m.end())
+        b, k = _argument(s, j)
         fa, fb = _frac(a).strip(), _frac(b).strip()
 
         def wrap(t):
@@ -124,8 +138,8 @@ def _binom(s):
         if not m:
             out.append(s[i:]); break
         out.append(s[i:m.start()])
-        a, j = _balanced(s, m.end())
-        b, k = _balanced(s, j)
+        a, j = _argument(s, m.end())
+        b, k = _argument(s, j)
         a, b = a.strip(), b.strip()
         if len(a) == 1 and len(b) == 1:
             out.append(SUP.get(a, a) + "C" + SUB.get(b, b))

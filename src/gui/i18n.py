@@ -168,6 +168,19 @@ PATTERNS.extend([
 ])
 
 
+EN.update({
+    'PDF 文档双语翻译器': 'PDF Bilingual Document Translator',
+    '输出格式': 'Output format', '仅 PPTX': 'PPTX only',
+    '开始生成所选语言和格式。': 'Starting the selected languages and formats.',
+    '请选择 TeX + PDF、PPTX 或全部输出格式。': 'Select TeX + PDF, PPTX, or all output formats.',
+    '未找到 xelatex。请先安装 MiKTeX，再生成 PDF。': 'xelatex was not found. Install MiKTeX to generate PDF.',
+})
+PATTERNS.extend([
+    (r'\[4/4\] 正在生成所选格式：(.*?)。全部成功后才写入输出目录。', lambda m: f'[4/4] Generating selected formats: {m[1]}. Publishing only after all succeed.'),
+    (r'已完成：所选语言和格式共 (\d+) 个文件已生成。本次(已使用 LLM|无需连接 LLM)。', lambda m: f'Complete: {m[1]} files generated for the selected languages and formats. ' + ('LLM was used.' if m[2] == '已使用 LLM' else 'No LLM connection was needed.')),
+])
+
+
 def translate(text, language='zh'):
     if language == 'zh':
         return text

@@ -42,6 +42,30 @@ class ConvertTest(unittest.TestCase):
         self.assertEqual({p.suffix for p in self.destination.iterdir()}, {'.tex', '.pdf', '.pptx'})
         self.assertTrue(any('不需要连接 LLM' in line for line in self.logs))
 
+    def test_selected_formats_all_languages_and_pptx_without_tex_installation(self):
+        self.set_bilingual()
+        for selection, expected in [('pptx', ('pptx',)), ('tex-pdf', ('tex', 'pdf'))]:
+            destination = self.root / selection
+            def build(key, target, formats, **kwargs):
+                self.assertEqual(formats, expected)
+                for ext in formats:
+                    (Path(kwargs['output_dir']) / f'{key}_{target.upper()}.{ext}').write_text('artifact')
+            with patch.object(convert, 'build_v2', side_effect=build), patch.object(convert.shutil, 'which', return_value=None):
+                result = convert.convert_pdf(self.source, destination, 'all', output_format=selection, progress=self.logs.append)
+            self.assertEqual(len(result['files']), len(expected) * 3)
+            self.assertEqual({p.suffix for p in destination.iterdir()}, {'.' + ext for ext in expected})
+
+    def test_pptx_model_completion_does_not_require_xelatex(self):
+        def finish(*args, **kwargs):
+            self.set_bilingual()
+            return 1
+        def build(key, target, formats, **kwargs):
+            self.assertEqual(formats, ('pptx',))
+            (Path(kwargs['output_dir']) / f'{key}_{target.upper()}.pptx').write_text('artifact')
+        with patch.object(convert, 'complete_api', side_effect=finish), patch.object(convert.shutil, 'which', return_value=None), patch.object(convert, 'build_v2', side_effect=build):
+            result = convert.convert_pdf(self.source, self.destination, 'bi', True, output_format='pptx', progress=self.logs.append)
+        self.assertTrue(result['used_llm'])
+
     def test_incomplete_without_checkbox_stops_before_any_output_or_network(self):
         with patch.object(convert, 'complete_api') as api, patch.object(convert, 'build_v2') as build:
             with self.assertRaises(workspace.NeedsModel):

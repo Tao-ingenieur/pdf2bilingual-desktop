@@ -8,7 +8,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'src'))
-from gui.app import App, LANGUAGES
+from gui.app import App, LANGUAGES, FORMATS
 from gui.i18n import EN, translate
 
 
@@ -26,6 +26,7 @@ class LanguageTest(unittest.TestCase):
         app.input_var.set('example.pdf')
         app.output_dir.set('D:/output')
         app.output_language.set('bi')
+        app.output_format.set('pptx')
         app.model.set('vision-model')
         app.token.set('not-a-real-key')
         app.model_enabled.set(True)
@@ -33,6 +34,8 @@ class LanguageTest(unittest.TestCase):
         app.ui_language.set('English')
         app.change_language()
         self.assertEqual(app.target(), 'bi')
+        self.assertEqual(app.output_format.get(), 'pptx')
+        self.assertEqual(app.title(), 'PDF Bilingual Document Translator')
         self.assertEqual(app.input_var.get(), 'example.pdf')
         self.assertEqual(app.output_dir.get(), 'D:/output')
         self.assertEqual(app.model.get(), 'vision-model')
@@ -57,7 +60,9 @@ class LanguageTest(unittest.TestCase):
         for caption in captions:
             self.assertNotIn('Codex', caption)
             self.assertNotIn('原貌', caption)
-            self.assertNotIn('PPTX', caption)
+        self.assertEqual(set(FORMATS.values()), {'tex-pdf', 'pptx', 'all'})
+        self.assertIn('TeX + PDF', captions)
+        self.assertIn('仅 PPTX', captions)
 
     def test_all_option_survives_interface_switch(self):
         self.app.output_language.set('all')

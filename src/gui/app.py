@@ -16,6 +16,7 @@ from pipeline.convert import convert_pdf
 from gui.i18n import translate
 
 LANGUAGES = {'中文': 'zh', '英文': 'en', '双语': 'bi', '全部（中文＋英文＋双语）': 'all'}
+FORMATS = {'TeX + PDF': 'tex-pdf', '仅 PPTX': 'pptx', 'TeX + PDF + PPTX': 'all'}
 
 
 class App(tk.Tk):
@@ -28,7 +29,7 @@ class App(tk.Tk):
             self.preferences = {}
         stored = self.preferences.get('language', 'zh')
         self.language = language or (stored if stored in ('zh', 'en') else 'zh')
-        self.title(self.tr('PDF 转换器'))
+        self.title(self.tr('PDF 文档双语翻译器'))
         self.geometry('940x660')
         self.minsize(780, 540)
         self.configure(bg='#f4f6fa')
@@ -43,6 +44,7 @@ class App(tk.Tk):
         self.input_var = tk.StringVar()
         self.output_dir = tk.StringVar(value=self.preferences.get('output_dir', OUTPUT_ROOT))
         self.output_language = tk.StringVar(value='zh')
+        self.output_format = tk.StringVar(value='all')
         self.ui_language = tk.StringVar(value='中文' if self.language == 'zh' else 'English')
         self.model_enabled = tk.BooleanVar(value=False)
         self.endpoint = tk.StringVar(value=self.preferences.get('base_url', os.environ.get('OPENAI_BASE_URL', 'https://api.openai.com/v1')))
@@ -73,7 +75,7 @@ class App(tk.Tk):
         root.pack(fill='both', expand=True)
         header = ttk.Frame(root)
         header.pack(fill='x', pady=(0, 20))
-        ttk.Label(header, text=self.tr('PDF 转换器'), style='Title.TLabel').pack(side='left')
+        ttk.Label(header, text=self.tr('PDF 文档双语翻译器'), style='Title.TLabel').pack(side='left')
         self.ui_box = ttk.Combobox(header, textvariable=self.ui_language, values=['中文', 'English'], state='readonly', width=10)
         self.ui_box.pack(side='right')
         self.ui_box.bind('<<ComboboxSelected>>', self.change_language)
@@ -94,6 +96,13 @@ class App(tk.Tk):
         for label, value in LANGUAGES.items():
             radio = ttk.Radiobutton(options, text=self.tr(label), variable=self.output_language, value=value)
             radio.pack(side='left', padx=(0, 14))
+            self.controls.append(radio)
+        formats = ttk.Frame(root)
+        formats.pack(fill='x', pady=(0, 16))
+        ttk.Label(formats, text=self.tr('输出格式')).pack(side='left', padx=(0, 12))
+        for label, value in FORMATS.items():
+            radio = ttk.Radiobutton(formats, text=self.tr(label), variable=self.output_format, value=value)
+            radio.pack(side='left', padx=(0, 18))
             self.controls.append(radio)
         actions = ttk.Frame(root)
         actions.pack(fill='x', pady=(0, 16))
@@ -125,7 +134,7 @@ class App(tk.Tk):
             self.ui_language.set('中文' if self.language == 'zh' else 'English')
             return
         self.language = 'en' if self.ui_language.get() == 'English' else 'zh'
-        self.title(self.tr('PDF 转换器'))
+        self.title(self.tr('PDF 文档双语翻译器'))
         self.root_frame.destroy()
         self.controls = []
         self._layout()
@@ -199,18 +208,19 @@ class App(tk.Tk):
             return
         source, output, target = self.input_var.get().strip(), self.output_dir.get().strip(), self.target()
         enabled, endpoint, model, token = self.model_enabled.get(), self.endpoint.get(), self.model.get(), self.token.get()
+        output_format = self.output_format.get()
         if not source or not output:
             self.append_log('请先选择输入 PDF 和输出目录。')
             return
         self.save_preferences()
         self.stop.clear()
         self.set_busy(True)
-        self.append_log('开始生成。三种格式将自动一起生成。')
+        self.append_log('开始生成所选语言和格式。')
         self.append_log('已启用 LLM，将在需要时自动连接。' if enabled else 'LLM 未启用，先尝试本地处理。')
         def worker():
             try:
                 result = convert_pdf(source, output, target, enabled, endpoint, model, token,
-                                     progress=self.log, cancelled=self.stop.is_set)
+                                     progress=self.log, cancelled=self.stop.is_set, output_format=output_format)
                 self.events.put(('done', result))
             except Exception as exc:
                 self.events.put(('error', str(exc)))
@@ -248,7 +258,7 @@ class App(tk.Tk):
 
 
 def main(argv=None):
-    parser = argparse.ArgumentParser(description='PDF Converter GUI')
+    parser = argparse.ArgumentParser(description='PDF Bilingual Document Translator GUI')
     parser.add_argument('--language', choices=['zh', 'en'])
     parser.add_argument('--self-test', action='store_true')
     parser.add_argument('--report', type=Path)
@@ -260,11 +270,14 @@ def main(argv=None):
         app.update()
         original = app.language
         app.output_language.set('bi')
+        app.output_format.set('pptx')
         app.ui_language.set('English' if original == 'zh' else '中文')
         with patch.object(app, 'save_preferences'):
             app.change_language()
             app.update()
         assert app.target() == 'bi'
+        assert app.output_format.get() == 'pptx'
+        assert app.title() == app.tr('PDF 文档双语翻译器')
         assert not app.model_enabled.get()
         assert isinstance(app.log_box, ScrolledText)
         text = app.log_box.get('1.0', 'end')
@@ -275,13 +288,15 @@ def main(argv=None):
         stats = next(iter(Path(INPUT_ROOT).glob('*tat*.pdf')), None)
         result = {'ok': True, 'frozen': bool(getattr(sys, 'frozen', False)), 'workspace': PROJECT_ROOT,
                   'initial_language': original, 'switched_language': app.language, 'single_log': True,
-                  'output_choices': list(LANGUAGES.values()), 'model_enabled': False}
+                  'output_choices': list(LANGUAGES.values()), 'format_choices': list(FORMATS.values()),
+                  'title': app.title(), 'model_enabled': False}
         if stats:
             from pipeline.workspace import NeedsModel
             destination = Path(WORK_ROOT).parent / 'qa' / 'simplified-exe-output'
             logs = []
             try:
-                convert_pdf(stats, destination, 'bi', progress=logs.append)
+                with patch('pipeline.convert.pending', return_value=[{'page': 1}]):
+                    convert_pdf(stats, destination, 'bi', progress=logs.append, output_format='pptx')
             except NeedsModel:
                 result['incomplete_blocked'] = True
             else:

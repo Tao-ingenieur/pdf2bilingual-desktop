@@ -8,6 +8,8 @@ from .extract import extract_pdf
 from .exporter import build_v2
 from .workspace import NeedsModel, fingerprint, key_for, workdir, read_doc, pending, save_doc
 
+OUTPUT_FORMATS = {'tex-pdf': ('tex', 'pdf'), 'pptx': ('pptx',), 'all': ('tex', 'pdf', 'pptx')}
+
 
 def _publish(stage, destination, names):
     """Publish a verified set; restore existing files if publication fails."""
@@ -45,7 +47,10 @@ def _publish(stage, destination, names):
 
 
 def convert_pdf(input_path, output_dir, target='zh', use_llm=False, base_url='', model='', api_key='',
-                progress=print, cancelled=lambda: False):
+                progress=print, cancelled=lambda: False, output_format='all'):
+    if output_format not in OUTPUT_FORMATS:
+        raise ValueError('请选择 TeX + PDF、PPTX 或全部输出格式。')
+    formats = OUTPUT_FORMATS[output_format]
     if target not in ('zh', 'en', 'bi', 'all'):
         raise ValueError('请选择中文、英文、双语或全部。')
     targets = ('zh', 'en', 'bi') if target == 'all' else (target,)
@@ -90,8 +95,8 @@ def convert_pdf(input_path, output_dir, target='zh', use_llm=False, base_url='',
         if not use_llm:
             progress('未连接 LLM，已停止；没有生成任何最终文件。')
             raise NeedsModel('本地解析或目标语言不完整。请勾选“连接 LLM”后重新生成，或在支持大模型的 agent 中使用 CLI 继续处理。')
-        if not shutil.which('xelatex'):
-            raise RuntimeError('未找到 xelatex。请先安装 MiKTeX，再生成全部三种格式。')
+        if 'pdf' in formats and not shutil.which('xelatex'):
+            raise RuntimeError('未找到 xelatex。请先安装 MiKTeX，再生成 PDF。')
         progress('[3/4] 正在连接 LLM，自动补全并翻译所需页面。')
         count = complete_api(key, content_target, base_url, model, api_key, enabled=True,
                              progress=progress, cancelled=cancelled)
@@ -105,7 +110,7 @@ def convert_pdf(input_path, output_dir, target='zh', use_llm=False, base_url='',
         progress('[3/4] 内容和目标语言已完整，本次不需要连接 LLM。')
     if cancelled():
         raise InterruptedError('处理已停止。')
-    progress('[4/4] 正在生成 TeX、PDF 和 PPTX。全部成功后才写入输出目录。')
+    progress('[4/4] 正在生成所选格式：' + ' + '.join(ext.upper() for ext in formats) + '。全部成功后才写入输出目录。')
     stage = workdir(key) / 'builds' / uuid.uuid4().hex
     stage.mkdir(parents=True)
     # Keep build diagnostics under work/ on failure; never publish partial documents.
@@ -114,19 +119,18 @@ def convert_pdf(input_path, output_dir, target='zh', use_llm=False, base_url='',
             progress(message)
     for language in targets:
         progress({'zh': '正在生成中文版。', 'en': '正在生成英文版。', 'bi': '正在生成双语版（中文一行，英文一行）。'}[language])
-        build_v2(key, language, ('tex', 'pdf', 'pptx'), progress=build_log, cancelled=cancelled, output_dir=stage)
-    files = [f'{key}_{language.upper()}.{ext}' for language in targets for ext in ('tex', 'pdf', 'pptx')]
+        build_v2(key, language, formats, progress=build_log, cancelled=cancelled, output_dir=stage)
+    files = [f'{key}_{language.upper()}.{ext}' for language in targets for ext in formats]
     if any(not (stage / name).is_file() or (stage / name).stat().st_size == 0 for name in files):
         raise RuntimeError('文档生成不完整，没有发布输出文件。')
     if cancelled():
         raise InterruptedError('处理已停止。')
-    names = [Path(name) for name in files] + [p.relative_to(stage) for p in (stage / 'figures').rglob('*') if p.is_file()]
+    names = [Path(name) for name in files]
+    if 'tex' in formats:
+        names += [p.relative_to(stage) for p in (stage / 'figures').rglob('*') if p.is_file()]
     _publish(stage, destination, names)
     shutil.rmtree(stage)
-    if target == 'all':
-        progress('已完成：中文、英文、双语共 9 个文件全部生成。' + ('本次已使用 LLM。' if used_llm else '本次无需连接 LLM。'))
-    else:
-        progress('已完成：TeX、PDF、PPTX 全部生成。' + ('本次已使用 LLM。' if used_llm else '本次无需连接 LLM。'))
+    progress(f'已完成：所选语言和格式共 {len(files)} 个文件已生成。' + ('本次已使用 LLM。' if used_llm else '本次无需连接 LLM。'))
     progress(f'输出目录：{destination}')
     return {'key': key, 'output_dir': str(destination), 'used_llm': used_llm,
             'files': [str(destination / name) for name in files]}
