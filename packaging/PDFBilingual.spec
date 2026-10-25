@@ -14,7 +14,7 @@ datas += tmp_ret[0]; binaries += tmp_ret[1]; hiddenimports += tmp_ret[2]
 
 
 a = Analysis(
-    [str(repo_dir / 'src' / 'pdf2bilingual' / 'gui' / 'app.py')],
+    [str(repo_dir / 'src' / 'gui' / 'app.py')],
     pathex=[str(repo_dir / 'src')],
     binaries=binaries,
     datas=datas,

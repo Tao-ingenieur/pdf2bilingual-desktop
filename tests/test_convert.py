@@ -8,7 +8,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'src'))
-from pdf2bilingual.pipeline import convert, workspace
+from pipeline import convert, workspace
 
 
 class ConvertTest(unittest.TestCase):
@@ -124,7 +124,7 @@ class ConvertTest(unittest.TestCase):
 
     def test_bilingual_chinese_then_english_for_body_and_subitems(self):
         self.set_bilingual()
-        from pdf2bilingual.pipeline.exporter import _body_lines, build_v2
+        from pipeline.exporter import _body_lines, build_v2
         lines = [text for kind, text in _body_lines(self.doc['pages'][0], 'bi')]
         self.assertEqual(lines, ['中文第一句。', 'First English sentence.', '中文子项。', 'English subitem.'])
         stage = self.root/'bilingual'

@@ -6,7 +6,7 @@ import shutil
 from datetime import datetime
 from pathlib import Path
 
-from pdf2bilingual.paths import INPUT_ROOT, WORK_ROOT
+from paths import INPUT_ROOT, WORK_ROOT
 
 
 class NeedsModel(RuntimeError):

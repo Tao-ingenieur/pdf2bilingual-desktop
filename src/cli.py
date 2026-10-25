@@ -5,7 +5,7 @@ import os
 import sys
 from pathlib import Path
 
-from pdf2bilingual.pipeline.workspace import NeedsModel, read_doc, pending, workdir
+from pipeline.workspace import NeedsModel, read_doc, pending, workdir
 
 
 def parser():
@@ -58,10 +58,10 @@ def main(argv=None):
     args = parser().parse_args(argv)
     try:
         if args.command == 'convert':
-            from pdf2bilingual.pipeline.convert import convert_pdf
+            from pipeline.convert import convert_pdf
             convert_pdf(args.input, args.output, args.lang, args.enable_model, args.base_url, args.model)
         elif args.command == 'extract':
-            from pdf2bilingual.pipeline.extract import extract_pdf
+            from pipeline.extract import extract_pdf
             key = extract_pdf(args.input, args.key, args.dpi, args.overwrite)
             print(f'已保存：{workdir(key)}')
             print('status 查看待办；缺少内容时可使用 LLM 或 agent CLI 继续处理。')
@@ -71,17 +71,17 @@ def main(argv=None):
             print(json.dumps({'key': args.key, 'target': args.lang, 'pages': len(doc.get('pages', [])), 'pending': rows}, ensure_ascii=False, indent=2))
             return 2 if rows else 0
         elif args.command == 'build':
-            from pdf2bilingual.pipeline.exporter import build_v2
+            from pipeline.exporter import build_v2
             build_v2(args.key, args.lang, ('pdf', 'tex', 'pptx') if args.format == 'all' else (args.format,))
         elif args.command == 'export-task':
-            from pdf2bilingual.pipeline.assist import export_handoff
+            from pipeline.assist import export_handoff
             print(export_handoff(args.key, args.lang))
         elif args.command == 'import-result':
-            from pdf2bilingual.pipeline.assist import import_result
+            from pipeline.assist import import_result
             print(f'已导入 {import_result(args.key, args.result)} 页；原内容已备份。')
         elif args.command == 'crop':
-            from pdf2bilingual.pipeline.extract import crop_figure
-            from pdf2bilingual.pipeline.workspace import save_doc
+            from pipeline.extract import crop_figure
+            from pipeline.workspace import save_doc
             doc = read_doc(args.key)
             if not 1 <= args.page <= len(doc['pages']):
                 raise ValueError('页码超出范围。')
@@ -90,10 +90,10 @@ def main(argv=None):
             save_doc(args.key, doc, backup=True)
             print(json.dumps(fig, ensure_ascii=False))
         elif args.command == 'assist':
-            from pdf2bilingual.pipeline.assist import complete_api
+            from pipeline.assist import complete_api
             print(f'完成 {complete_api(args.key, args.lang, args.base_url, args.model, enabled=args.enable_model)} 页。')
         elif args.command == 'gui':
-            from pdf2bilingual.gui.app import main as gui_main
+            from gui.app import main as gui_main
             gui_main([])
         return 0
     except NeedsModel as exc:

@@ -10,7 +10,7 @@ from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'src'))
 from PIL import Image
-from pdf2bilingual.pipeline import workspace, assist, exporter
+from pipeline import workspace, assist, exporter
 
 
 class WorkflowTest(unittest.TestCase):
@@ -129,7 +129,7 @@ class WorkflowTest(unittest.TestCase):
             exporter.rich_tex(r'$\begin{filecontents}{oops}x\end{filecontents}$')
 
     def test_offline_extraction_detects_blank_page_and_builds_source(self):
-        from pdf2bilingual.pipeline import extract
+        from pipeline import extract
         inputs = self.root/'input'
         inputs.mkdir()
         pdf = inputs/'native_and_blank.pdf'

@@ -1,6 +1,6 @@
 # converter/pipeline.py — 编排：读取 → 生成 → 复制 → 清理
 import os, shutil
-from pdf2bilingual.paths import WORK_ROOT, OUTPUT_ROOT
+from paths import WORK_ROOT, OUTPUT_ROOT
 from .loader import load, list_keys
 from .texgen import build_tex
 from .pptxgen import build_ppt

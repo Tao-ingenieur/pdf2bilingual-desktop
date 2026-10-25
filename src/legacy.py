@@ -8,14 +8,14 @@
 #   python build.py --lang all --format tex    # 仅生成三种语言的 .tex
 import os, sys, argparse
 
-from pdf2bilingual.pipeline.pipeline import run, LANGS
+from pipeline.pipeline import run, LANGS
 
 FORMATS = ("tex", "pdf", "pptx")
 
 
 def main():
     if len(sys.argv) > 1 and sys.argv[1] in ('convert', 'extract', 'status', 'build', 'crop', 'export-task', 'import-result', 'assist', 'gui'):
-        from pdf2bilingual.cli import main as cli_main
+        from cli import main as cli_main
         raise SystemExit(cli_main(sys.argv[1:]))
     ap = argparse.ArgumentParser(
         description="通用 PDF/图片 → 中/英/双语 .tex/.pdf/.pptx 转换")
@@ -27,14 +27,14 @@ def main():
                     help="输出格式：tex/pdf/pptx/all(默认)")
     args = ap.parse_args()
     fmts = FORMATS if args.format == "all" else (args.format,)
-    from pdf2bilingual.pipeline.loader import load, list_keys
+    from pipeline.loader import load, list_keys
     selected = args.key
     if selected is None:
         keys = list_keys()
         if len(keys) == 1:
             selected = keys[0]
     if selected and load(selected).get('schema_version') == 2:
-        from pdf2bilingual.pipeline.exporter import build_v2
+        from pipeline.exporter import build_v2
         build_v2(selected, 'zh' if args.lang == 'all' else args.lang, fmts)
         return
     if args.lang == 'source':

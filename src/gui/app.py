@@ -11,9 +11,9 @@ from pathlib import Path
 from tkinter import filedialog, ttk
 from tkinter.scrolledtext import ScrolledText
 
-from pdf2bilingual.paths import INPUT_ROOT, OUTPUT_ROOT, WORK_ROOT, CONFIG_ROOT
-from pdf2bilingual.pipeline.convert import convert_pdf
-from pdf2bilingual.gui.i18n import translate
+from paths import INPUT_ROOT, OUTPUT_ROOT, WORK_ROOT, CONFIG_ROOT
+from pipeline.convert import convert_pdf
+from gui.i18n import translate
 
 LANGUAGES = {'中文': 'zh', '英文': 'en', '双语': 'bi', '全部（中文＋英文＋双语）': 'all'}
 
@@ -256,7 +256,7 @@ def main(argv=None):
     app = App(language=args.language)
     if args.self_test:
         from unittest.mock import patch
-        from pdf2bilingual.paths import PROJECT_ROOT
+        from paths import PROJECT_ROOT
         app.update()
         original = app.language
         app.output_language.set('bi')
@@ -277,7 +277,7 @@ def main(argv=None):
                   'initial_language': original, 'switched_language': app.language, 'single_log': True,
                   'output_choices': list(LANGUAGES.values()), 'model_enabled': False}
         if stats:
-            from pdf2bilingual.pipeline.workspace import NeedsModel
+            from pipeline.workspace import NeedsModel
             destination = Path(WORK_ROOT).parent / 'qa' / 'simplified-exe-output'
             logs = []
             try:

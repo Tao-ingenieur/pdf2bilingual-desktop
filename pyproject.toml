@@ -19,17 +19,19 @@ dependencies = [
 build = ["pyinstaller>=6.10"]
 
 [project.scripts]
-pdf2bilingual = "pdf2bilingual.cli:main"
+pdf2bilingual = "cli:main"
 
 [project.gui-scripts]
-pdf2bilingual-gui = "pdf2bilingual.gui.app:main"
+pdf2bilingual-gui = "gui.app:main"
 
 [project.urls]
 Repository = "https://github.com/Tao-ingenieur/pdf2bilingual-desktop"
 
 [tool.setuptools]
 package-dir = {"" = "src"}
+py-modules = ["cli", "paths", "legacy"]
 
 [tool.setuptools.packages.find]
 where = ["src"]
+include = ["pipeline*", "gui*"]
 namespaces = false

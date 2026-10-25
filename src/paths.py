@@ -3,7 +3,7 @@ import os
 import sys
 from pathlib import Path
 
-REPO_DIR = str(Path(__file__).resolve().parents[2])
+REPO_DIR = str(Path(__file__).resolve().parents[1])
 
 
 def project_root():
@@ -22,7 +22,7 @@ def project_root():
 PROJECT_ROOT = str(project_root())
 
 DIST_DIR = os.path.join(PROJECT_ROOT, "dist")
-WORK_ROOT = os.path.join(DIST_DIR, "work")        # 中间数据（不传 gitee）
+WORK_ROOT = os.path.join(DIST_DIR, "work")        # 本地中间数据，不上传
 OUTPUT_ROOT = os.path.join(DIST_DIR, "output")     # 最终产物
 INPUT_ROOT = os.path.join(DIST_DIR, "input")       # 原始素材
 CONFIG_ROOT = os.path.join(DIST_DIR, 'config')

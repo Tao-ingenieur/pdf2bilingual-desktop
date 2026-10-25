@@ -52,26 +52,42 @@ pdf2bilingual convert "dist/input/Statistics 1&2&3-stamped.pdf" --output "D:/my-
 pdf2bilingual convert "dist/input/Statistics 1&2&3-stamped.pdf" --output "D:/my-output" --lang bi --enable-model --base-url https://api.openai.com/v1 --model YOUR_VISION_MODEL
 ```
 
-也可使用 `python -m pdf2bilingual` 代替 `pdf2bilingual`；`pdf2bilingual-gui` 或 `python -m pdf2bilingual.gui` 启动源码 GUI。输出语言为 `zh`、`en`、`bi`、`all`；`--lang all` 一次生成三套共 9 个文件。`convert` 固定生成全部三种格式，不需要选择格式。
+安装后也可使用 `python -m cli` 代替 `pdf2bilingual`；`pdf2bilingual-gui` 或 `python -m gui` 启动源码 GUI。从项目根目录直接运行源码时，用 `python repo/src/cli.py ...`。输出语言为 `zh`、`en`、`bi`、`all`；`--lang all` 一次生成三套共 9 个文件。`convert` 固定生成全部三种格式，不需要选择格式。
 
-### 在 agent 中处理剩余工作
+### 没有 LLM API：交给 Codex 等 agent 运行 CLI
 
-GUI 不提供 agent 的任务入口；在 Codex 等 agent 中可以使用这些 CLI：
+**没有 API Key 也可以处理扫描页和翻译。** 在能读取本地文件、查看图片并运行终端的 Codex 等 agent 中打开最外层项目目录，让 agent 使用自己的模型能力处理 CLI 导出的任务。本程序不再额外调用模型 API；不需要填写 API Key，也不需要在 GUI 中勾选“连接 LLM”。Agent 自身的模型访问和额度仍由所用 agent 提供。
+
+GUI 在本地解析不完整时会停止。此时可以直接让 agent 接手已有的 `dist/work/<key>/`，无需重新手工准备 JSON 或截图。CLI 的具体流程如下（在最外层项目目录运行；使用 agent 当前可用的 Python）：
 
 ```powershell
 # 默认项目名为输入文件名去掉特殊字符，例：Statistics_1_2_3-stamped
-pdf2bilingual extract "dist/input/Statistics 1&2&3-stamped.pdf"
-pdf2bilingual status Statistics_1_2_3-stamped --lang bi
-pdf2bilingual export-task Statistics_1_2_3-stamped --lang bi
+python repo/src/cli.py extract "dist/input/Statistics 1&2&3-stamped.pdf"
+python repo/src/cli.py status Statistics_1_2_3-stamped --lang bi
+python repo/src/cli.py export-task Statistics_1_2_3-stamped --lang bi
 
 # Agent 读取 codex_task/PROMPT.txt、task.json 和指定页面图像，保存逐页 result.json
-pdf2bilingual import-result Statistics_1_2_3-stamped "dist/work/Statistics_1_2_3-stamped/codex_task/result.json"
-pdf2bilingual convert "dist/input/Statistics 1&2&3-stamped.pdf" --output "D:/my-output" --lang bi
+python repo/src/cli.py import-result Statistics_1_2_3-stamped "dist/work/Statistics_1_2_3-stamped/codex_task/result.json"
+python repo/src/cli.py convert "dist/input/Statistics 1&2&3-stamped.pdf" --output "D:/my-output" --lang all
 ```
 
-这样由 agent 直接翻译、整理并导入中间内容，项目无需另调模型 API。支持分批导入，原文、坐标始终保留。导入验证源文件指纹、页码、目标语言、双语子项数量和图片裁图范围，修改前会自动备份。
+如果之前已在 GUI 或 CLI 中解析过，跳过 `extract`，直接 `status` 和 `export-task`。`status` 在有待办时返回退出码 2，表示需要补全，并非程序崩溃。目标为“全部”时，导出 `--lang bi`，补全一次双语后即可复用生成三套。
 
-高级命令仍提供 `build`、`crop`、`assist` 等，见 `pdf2bilingual --help`。旧章节式 JSON 可用 `python -m pdf2bilingual.legacy <key>`。退出码：0 成功；1 参数／处理失败；2 内容不完整、需要继续处理。
+可以把下面的要求直接发给 agent：
+
+```text
+请在当前项目中处理 dist/input/Statistics 1&2&3-stamped.pdf，目标为中文、英文、双语全部版本。
+我没有 LLM API，请不要使用 --enable-model 或调用外部模型 API。
+请运行 repo/src/cli.py，复用已有解析结果；必要时先 extract。
+用 export-task --lang bi 导出任务，读取 PROMPT.txt、task.json 和它指定的页面截图。
+由你直接识别、翻译并逐条对齐，按任务格式保存 result.json；双语中文在前、英文在后。
+用 import-result 校验并导入，再运行 convert --lang all --output dist/output。
+支持分批处理；无法辨认的内容应保留为待办，不要猜测，也不要输出不完整成品。
+```
+
+导入后，处理结果会更新到 `content.json`，模型定位的插图由本地程序裁切并更新图片库。支持分批导入，原文、坐标始终保留。导入验证源文件指纹、页码、目标语言、双语子项数量和图片裁图范围，修改前会自动备份。
+
+高级命令仍提供 `build`、`crop`、`assist` 等，见 `python repo/src/cli.py --help`。旧章节式 JSON 可用 `python repo/src/legacy.py <key>`。退出码：0 成功；1 参数／处理失败；2 内容不完整、需要继续处理。
 
 ## 数据和输出
 
@@ -84,9 +100,7 @@ pdf2bilingual convert "dist/input/Statistics 1&2&3-stamped.pdf" --output "D:/my-
     .gitignore
     README.md
     pyproject.toml                   依赖、安装和命令入口
-    src/pdf2bilingual/
-      __init__.py
-      __main__.py
+    src/
       paths.py                       统一路径管理
       cli.py                         CLI 入口
       legacy.py                      旧章节 JSON 构建入口
@@ -118,7 +132,7 @@ git clone https://github.com/Tao-ingenieur/pdf2bilingual-desktop.git repo
 py -3 -m pip install -e ./repo
 ```
 
-输入文件、exe、本机设置和构建环境不会随源码推送。已有 Gitee 远程可保留为 `origin`，GitHub 作为额外的 `github` 远程。
+输入文件、exe、本机设置和构建环境不会随源码推送。Git 远程 `origin` 指向 GitHub 公开仓库。
 
 本地完整性检查使用保守规则。表格、图片、数学结构无法可靠提取时会请求补全，不把简单文字抽取当作完整转换。图中的原始文字仍留在裁图内，图内翻译需要另外处理。
 

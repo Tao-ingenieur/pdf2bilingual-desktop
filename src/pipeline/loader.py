@@ -1,6 +1,6 @@
 # converter/loader.py — 读取中间数据 content.json
 import json, os, glob
-from pdf2bilingual.paths import WORK_ROOT
+from paths import WORK_ROOT
 
 
 def load(key):

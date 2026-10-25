@@ -8,8 +8,8 @@ from pathlib import Path
 from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'src'))
-from pdf2bilingual.gui.app import App, LANGUAGES
-from pdf2bilingual.gui.i18n import EN, translate
+from gui.app import App, LANGUAGES
+from gui.i18n import EN, translate
 
 
 class LanguageTest(unittest.TestCase):
@@ -72,7 +72,7 @@ class LanguageTest(unittest.TestCase):
         self.assertEqual(translate('LLM 已连接，第 2 页处理完成。', 'en'), 'LLM connected. Page 2 completed.')
 
     def test_frozen_config_uses_executable_directory(self):
-        import pdf2bilingual.paths as config
+        import paths as config
         with patch.dict(os.environ, {'PDFBILINGUAL_HOME': ''}), \
              patch.object(sys, 'frozen', True, create=True), \
              patch.object(sys, 'executable', r'D:\Portable\PDFBilingual.exe'):
@@ -81,7 +81,7 @@ class LanguageTest(unittest.TestCase):
         importlib.reload(config)
 
     def test_release_executable_uses_shared_dist_and_config(self):
-        import pdf2bilingual.paths as config
+        import paths as config
         with patch.dict(os.environ, {'PDFBILINGUAL_HOME': ''}), \
              patch.object(sys, 'frozen', True, create=True), \
              patch.object(sys, 'executable', r'D:\Portable\dist\release\PDFBilingual.exe'):

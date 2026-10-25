@@ -3,7 +3,7 @@ import re
 import shutil
 from pathlib import Path
 
-from pdf2bilingual.paths import OUTPUT_ROOT
+from paths import OUTPUT_ROOT
 from .workspace import read_doc, workdir, pending, source_path, figure_path, NeedsModel
 
 

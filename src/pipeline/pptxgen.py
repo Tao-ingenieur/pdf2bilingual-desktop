@@ -1,7 +1,7 @@
 # converter/pptxgen.py — 生成 PPTX
 # ---------------- PPT ----------------
 import os
-from pdf2bilingual.paths import NAVY, LIGHT, GREY, WHITE, EN_FONT, ZH_FONT, WORK_ROOT
+from paths import NAVY, LIGHT, GREY, WHITE, EN_FONT, ZH_FONT, WORK_ROOT
 from .tex2plain import tex2plain
 from pptx.util import Inches, Pt, Emu
 from pptx.enum.text import PP_ALIGN, MSO_ANCHOR

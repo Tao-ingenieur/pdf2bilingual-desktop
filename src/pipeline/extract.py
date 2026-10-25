@@ -8,7 +8,7 @@ import pdfplumber
 import pypdfium2 as pdfium
 from PIL import Image
 
-from pdf2bilingual.paths import INPUT_ROOT
+from paths import INPUT_ROOT
 from .workspace import fingerprint, key_for, workdir, save_doc, figure_path
 
 
