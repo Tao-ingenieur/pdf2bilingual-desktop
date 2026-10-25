@@ -1,0 +1,35 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pdf2bilingual-desktop"
+version = "0.2.0"
+description = "Windows GUI and CLI for local PDF extraction and optional LLM-assisted Chinese, English and bilingual exports"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "pdfplumber>=0.11",
+    "pypdfium2>=4.30",
+    "python-pptx>=1.0",
+    "pillow>=10.0",
+]
+
+[project.optional-dependencies]
+build = ["pyinstaller>=6.10"]
+
+[project.scripts]
+pdf2bilingual = "pdf2bilingual.cli:main"
+
+[project.gui-scripts]
+pdf2bilingual-gui = "pdf2bilingual.gui.app:main"
+
+[project.urls]
+Repository = "https://github.com/Tao-ingenieur/pdf2bilingual-desktop"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+namespaces = false

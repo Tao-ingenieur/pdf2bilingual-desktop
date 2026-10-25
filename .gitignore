@@ -1,0 +1,14 @@
+# Python
+__pycache__/
+*.pyc
+
+# LaTeX 编译临时文件（build.py 会自动清理，此处兜底）
+*.aux
+*.log
+*.out
+.venv/
+.pytest_cache/
+*.exe
+*.egg-info/
+/build/
+/dist/
